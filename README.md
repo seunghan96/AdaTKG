@@ -35,76 +35,24 @@ paper. CPU inference is not supported.
 
 ## 2. Datasets
 
-We use the four standard TKG benchmarks **ICEWS14**, **ICEWS18**,
-**ICEWS05-15**, and **GDELT** under the same setup as
-TransFIR~\[1\]. Datasets are **not** shipped with the repo (`data/`
-is `.gitignore`d); the user prepares them once locally before training.
+We use four standard TKG benchmarks: **ICEWS14**, **ICEWS18**,
+**ICEWS05-15**, and **GDELT**. Place the raw files under
+`data/<DATASET>/` (each folder contains `train.txt`, `valid.txt`,
+`test.txt`, `entity2id.txt`, `relation2id.txt`). The `data/` folder
+itself is `.gitignore`d, so it is not shipped with the repo.
 
-### 2.1 Expected file layout
-
-```
-data/
-├── ICEWS14/
-│   ├── train.txt          ← tab-separated quadruples (subj  rel  obj  time_idx)
-│   ├── valid.txt
-│   ├── test.txt
-│   ├── entity2id.txt      ← line i (0-indexed) = entity surface form, then "\t" + id
-│   └── relation2id.txt
-├── ICEWS18/                ← same five files
-├── ICEWS05-15/             ← same five files
-└── GDELT/                  ← same five files (entity surface form ends with " (...)" sense suffix)
-```
-
-Each line of `train.txt` / `valid.txt` / `test.txt` is `subj_id<TAB>rel_id<TAB>obj_id<TAB>time_idx`,
-with `time_idx` an integer index in chronological order (1 step = 1 day
-for ICEWS, 15 minutes for GDELT). `entity2id.txt` and
-`relation2id.txt` map the integer ids back to surface forms.
-
-### 2.2 Where to get the raw files
-
-The four benchmarks are publicly redistributed by the authors of
-TransFIR and earlier TKG works~\[1, 2\]. We adopt the **TransFIR
-release** verbatim (same files, same chronological 5:2:3 split):
-
-- TransFIR official repository (datasets folder):
-  `https://github.com/<TransFIR-authors>/TransFIR` (please refer to
-  the dataset-download instructions in their `README` and copy the
-  resulting `train.txt / valid.txt / test.txt / entity2id.txt /
-  relation2id.txt` directly into our `data/<DATASET>/` folders).
-- Original sources: ICEWS14 / ICEWS18 / ICEWS05-15 are derived from
-  the ICEWS event corpus on Harvard Dataverse~\[1\]; GDELT is from
-  the GDELT event database~\[2\].
-
-\[1\] Boschee et al., *ICEWS Coded Event Data*, Harvard Dataverse, 2015.
-\[2\] Leetaru and Schrodt, *GDELT: Global Data on Events, Location and
-Tone*, ISA Annual Convention, 2013.
-
-### 2.3 One-time preprocessing
-
-Once `data/<DATASET>/{train,valid,test,entity2id,relation2id}.txt` are
-in place, the training launcher auto-builds two caches per dataset:
-
-- `data/<DS>/<DS>_T_14.pkl` — interaction-chain cache built by
-  `data_process.py`.
-- `data/<DS>/<DS>_Bert_Entity_Embedding.npy` — frozen BERT embeddings
-  built by `word_embedding.py`.
-
-You can also build them manually:
+Then, run the two preprocessing scripts once per dataset:
 
 ```bash
-# Interaction-chain cache (T = history window in days)
-python3 data_process.py    --dataset ICEWS14 --T 14
+# (1) Interaction chain
+python data_process.py    --dataset {dataset} --T 14
 
-# BERT [CLS] embeddings (set --bert_model_path to your local
-# bert-base-uncased checkpoint, or any HuggingFace BERT compatible model)
-python3 word_embedding.py  --dataset ICEWS14 \
-                           --bert_model_path bert-base-uncased
+# (2) Textual entity embedding
+python word_embedding.py  --dataset {dataset} --bert_model_path {your_bert_path}
 ```
 
-Repeat per dataset. The two caches are reused across all four models
-(`Base`, `AdaTKG-EMA`, `AdaTKG-GRU`, `AdaTKG-CrossAtt`) and across HP
-configurations, so this preprocessing step happens only once per
-benchmark.
+Both caches are reused across all four models and all HP
+configurations, so this step is performed only once per benchmark.
 
 ---
 
@@ -206,5 +154,16 @@ emerging-slice metrics:
 bash run_experiment.sh AdaTKG-EMA test ICEWS14 0
 ```
 
+
+---
+
+## 7. Acknowledgement
+
+Our codebase builds on the official **TransFIR** implementation
+(<https://github.com/zhaodazhuang2333/TransFIR>); the static encoder,
+VQ codebook, and ConvTransE decoder are adopted from there unchanged,
+and we adopt the same datasets and chronological train/valid/test
+splits for fair comparison. We thank the TransFIR authors for
+releasing their code.
 
 ---
