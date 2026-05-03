@@ -1,0 +1,5 @@
+model,dataset,max_length,num_layers,hidden_dim,num_code
+AdaTKG-EMA,ICEWS14,10,3,768,100
+AdaTKG-EMA,ICEWS18,30,3,1024,100
+AdaTKG-EMA,ICEWS05-15,30,3,1024,50
+AdaTKG-EMA,GDELT,30,2,1024,30

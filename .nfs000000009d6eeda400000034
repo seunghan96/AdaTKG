@@ -1,0 +1,233 @@
+#!/bin/bash
+#
+# run_experiment.sh — TransFIR & Enhanced variants experiment runner
+#
+# Usage:
+#   bash run_experiment.sh <model> <mode> [dataset] [gpu]
+#
+# Arguments:
+#   model   : base | v1 | v1_gmm | v1_denoise | v2 | v2_ema | v2_attn | v2_proto
+#   mode    : train | test
+#   dataset : ICEWS14 (default) | ICEWS18 | ICEWS05-15 | GDELT
+#   gpu     : 0 (default) | 1
+#
+# Examples:
+#   bash run_experiment.sh base  train ICEWS14
+#   bash run_experiment.sh v2    train ICEWS14 1
+#   bash run_experiment.sh v1_gmm train ICEWS18 0
+
+set -euo pipefail
+
+# ================================================================
+# Paths
+# ================================================================
+PROJECT_DIR="/home/seunghan.lee/workspace/TransFIR"
+SAVE_ROOT="/home/seunghan.lee/nfs-fin/seunghan.lee/kg/transfir"
+
+# ================================================================
+# Parse arguments
+# ================================================================
+MODEL="${1:?Usage: bash run_experiment.sh <model> <train|test> [dataset] [gpu]}"
+MODE="${2:?Usage: bash run_experiment.sh <model> <train|test> [dataset] [gpu]}"
+DATASET="${3:-ICEWS14}"
+GPU="${4:-0}"
+
+echo "============================================"
+echo " Model:   ${MODEL}"
+echo " Mode:    ${MODE}"
+echo " Dataset: ${DATASET}"
+echo " GPU:     ${GPU}"
+echo "============================================"
+
+export CUDA_VISIBLE_DEVICES="${GPU}"
+
+# ================================================================
+# Hyperparameter search grids
+# (논문 Figure 12 기반 — 각 HP를 독립적으로 스윕)
+# ================================================================
+MAX_LENGTH_GRID=(10 15 30)
+MAX_LENGTH_GRID=(30)
+# v2-attn: 완료
+# v2: 완료
+# v2-eam: GDE:T=3-만 남음
+
+
+NUM_LAYERS_GRID=(2 3)
+NUM_LAYERS_GRID=(2)
+
+HIDDEN_DIM_GRID=(256 512 768 1024)
+HIDDEN_DIM_GRID=(768)
+
+NUM_CODE_GRID=(30 50 100)
+# NUM_CODE_GRID=(50 30)
+
+# ================================================================
+# Model-specific settings
+# ================================================================
+case "${MODEL}" in
+    base)
+        ENHANCEMENT="none"
+        SCRIPT="main.py"
+        ;;
+    v1)         ENHANCEMENT="generative";  SCRIPT="main_enhanced.py" ;;
+    v1_gmm)     ENHANCEMENT="gmm";         SCRIPT="main_enhanced.py" ;;
+    v1_denoise) ENHANCEMENT="denoise";     SCRIPT="main_enhanced.py" ;;
+    v2)         ENHANCEMENT="meta";        SCRIPT="main_enhanced.py" ;;
+    v2_ema)     ENHANCEMENT="ema";         SCRIPT="main_enhanced.py" ;;
+    v2_attn)    ENHANCEMENT="attention";   SCRIPT="main_enhanced.py" ;;
+    v2_proto)   ENHANCEMENT="prototype";   SCRIPT="main_enhanced.py" ;;
+    v1_gmm_v2_ema) ENHANCEMENT="gmm_ema";  SCRIPT="main_enhanced.py" ;;
+    v2_ema_v4)  ENHANCEMENT="ema_v4";      SCRIPT="main_enhanced.py" ;;
+    v2_ema_v6)  ENHANCEMENT="ema_v6";      SCRIPT="main_enhanced.py" ;;
+    v4_v6)      ENHANCEMENT="v4_v6";       SCRIPT="main_enhanced.py" ;;
+    v3)         ENHANCEMENT="v3";          SCRIPT="main_enhanced.py" ;;
+    v3_fourier) ENHANCEMENT="v3_fourier";  SCRIPT="main_enhanced.py" ;;
+    v3_multi)   ENHANCEMENT="v3_multi";    SCRIPT="main_enhanced.py" ;;
+    v4)         ENHANCEMENT="v4";          SCRIPT="main_enhanced.py" ;;
+    v4_sparse)  ENHANCEMENT="v4_sparse";   SCRIPT="main_enhanced.py" ;;
+    v5)         ENHANCEMENT="v5";          SCRIPT="main_enhanced.py" ;;
+    v6)         ENHANCEMENT="v6";          SCRIPT="main_enhanced.py" ;;
+    v6_curriculum) ENHANCEMENT="v6_curriculum"; SCRIPT="main_enhanced.py" ;;
+    v6_cluster) ENHANCEMENT="v6_cluster";  SCRIPT="main_enhanced.py" ;;
+    *)
+        echo "ERROR: Unknown model '${MODEL}'."
+        echo "Use: base|v1|v1_gmm|v1_denoise|v2|v2_ema|v2_attn|v2_proto|v3|v3_fourier|v3_multi|v4|v4_sparse|v5|v6|v6_curriculum|v6_cluster"
+        exit 1
+        ;;
+esac
+
+# ================================================================
+# Helper: build unique experiment ID (모든 HP 포함 → overwrite 불가)
+# ================================================================
+make_exp_id() {
+    local model="$1" dataset="$2" ml="$3" nl="$4" hd="$5" nc="$6"
+    echo "${model}_${dataset}_ml${ml}_nl${nl}_hd${hd}_nc${nc}"
+}
+
+# ================================================================
+# Helper: check if experiment already completed
+# ================================================================
+is_done() {
+    local exp_dir="$1" mode="$2"
+    if [[ "${mode}" == "train" ]]; then
+        # Check 1: enhanced model checkpoint (model_seed*.pth)
+        if find "${exp_dir}" -maxdepth 1 -name "model_seed*.pth" 2>/dev/null | grep -q .; then
+            return 0
+        fi
+        # Check 2: base model checkpoint (model_dataset_*.pth in subdirectory)
+        if find "${exp_dir}" -maxdepth 2 -name "model_dataset_*.pth" 2>/dev/null | grep -q .; then
+            return 0
+        fi
+        # Check 3: train_log.txt contains "Early stop" or "Reached maximum"
+        local log="${exp_dir}/train_log.txt"
+        if [[ -f "${log}" ]] && grep -qE "Early stop|Reached maximum|Best results" "${log}" 2>/dev/null; then
+            return 0
+        fi
+        # Check 4: base의 하위폴더 log.txt에서 확인
+        if find "${exp_dir}" -maxdepth 2 -name "log.txt" -exec grep -lE "Early stop|Reached maximum|Best results" {} + 2>/dev/null | grep -q .; then
+            return 0
+        fi
+    elif [[ "${mode}" == "test" ]]; then
+        if [[ -f "${exp_dir}/test_results.txt" ]]; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# ================================================================
+# Preprocessing (skip if already done)
+# ================================================================
+cd "${PROJECT_DIR}"
+
+PKL_FILE="data/${DATASET}/${DATASET}_T_14.pkl"
+NPY_FILE="data/${DATASET}/${DATASET}_Bert_Entity_Embedding.npy"
+
+if [[ ! -f "${PKL_FILE}" ]]; then
+    echo "[Preprocess] Generating interaction chains: ${PKL_FILE}"
+    python3 data_process.py --dataset "${DATASET}" --T 14
+else
+    echo "[Preprocess] Interaction chains already exist — skip"
+fi
+
+if [[ ! -f "${NPY_FILE}" ]]; then
+    echo "[Preprocess] Generating BERT entity embeddings: ${NPY_FILE}"
+    BERT_PATH="${BERT_MODEL_PATH:-bert-base-uncased}"
+    python3 word_embedding.py --dataset "${DATASET}" --bert_model_path "${BERT_PATH}"
+else
+    echo "[Preprocess] BERT embeddings already exist — skip"
+fi
+
+# ================================================================
+# Run experiments (4중 for loop)
+# ================================================================
+TOTAL=0
+SKIPPED=0
+
+for MAX_LENGTH in "${MAX_LENGTH_GRID[@]}"; do
+for NUM_LAYERS in "${NUM_LAYERS_GRID[@]}"; do
+for HIDDEN_DIM in "${HIDDEN_DIM_GRID[@]}"; do
+for NUM_CODE in "${NUM_CODE_GRID[@]}"; do
+
+    EXP_ID=$(make_exp_id "${MODEL}" "${DATASET}" "${MAX_LENGTH}" "${NUM_LAYERS}" "${HIDDEN_DIM}" "${NUM_CODE}")
+    EXP_DIR="${SAVE_ROOT}/${EXP_ID}"
+    TOTAL=$((TOTAL + 1))
+
+    # Skip if already completed
+    if is_done "${EXP_DIR}" "${MODE}"; then
+        echo "[SKIP] ${EXP_ID}"
+        SKIPPED=$((SKIPPED + 1))
+        continue
+    fi
+
+    echo ""
+    echo "--------------------------------------------"
+    echo " [${TOTAL}] Experiment: ${EXP_ID}"
+    echo " Save dir: ${EXP_DIR}"
+    echo "--------------------------------------------"
+
+    mkdir -p "${EXP_DIR}"
+
+    # ---- Build command ----
+    CMD="python3 ${SCRIPT} --dataset ${DATASET}"
+    CMD="${CMD} --max_length ${MAX_LENGTH}"
+    CMD="${CMD} --num_layers ${NUM_LAYERS}"
+    CMD="${CMD} --hidden_dim ${HIDDEN_DIM}"
+    CMD="${CMD} --num_code ${NUM_CODE}"
+    CMD="${CMD} --word_embedding_path data"
+    CMD="${CMD} --result_dir ${EXP_DIR}"
+
+    if [[ "${MODEL}" != "base" ]]; then
+        CMD="${CMD} --enhancement ${ENHANCEMENT}"
+    fi
+
+    echo " >> CMD: ${CMD}"
+
+    if [[ "${MODE}" == "train" ]]; then
+        eval "${CMD}" 2>&1 | tee "${EXP_DIR}/train_log.txt"
+        echo " >> Training finished. Results in ${EXP_DIR}"
+    elif [[ "${MODE}" == "test" ]]; then
+        echo " >> Extracting test results from logs..."
+        # Find the log file (train_log.txt or nested log.txt)
+        LOG_FILE="${EXP_DIR}/train_log.txt"
+        if [[ ! -f "${LOG_FILE}" ]]; then
+            LOG_FILE=$(find "${EXP_DIR}" -maxdepth 2 -name "log.txt" -print -quit 2>/dev/null || echo "")
+        fi
+        if [[ -n "${LOG_FILE}" && -f "${LOG_FILE}" ]]; then
+            grep -E "\[Test\]|\[Test Emerging\]|\[Test Unknown\]|Emerging_MRR|Unknown_MRR|Best test" "${LOG_FILE}" | tail -10 > "${EXP_DIR}/test_results.txt"
+            echo " >> Saved to ${EXP_DIR}/test_results.txt"
+            cat "${EXP_DIR}/test_results.txt"
+        else
+            echo " >> ERROR: No log found. Run train first."
+        fi
+    fi
+
+done
+done
+done
+done
+
+echo ""
+echo "============================================"
+echo " ${MODEL}/${DATASET}: ${TOTAL} total, ${SKIPPED} skipped, $((TOTAL - SKIPPED)) ran."
+echo "============================================"

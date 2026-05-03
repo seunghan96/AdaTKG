@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Build / cache
+.cache/
+.pytest_cache/
+
+# Trained checkpoints / results / logs
+results/
+logs/
+*.pth
+
+# Data (download separately per dataset; not shipped with the repo)
+data/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# === private (not in public release) ===
+# Ablation / analysis launchers used internally — not part of the
+# public reproducibility surface.
+analysis/

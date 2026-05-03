@@ -1,0 +1,5 @@
+model,dataset,max_length,num_layers,hidden_dim,num_code
+AdaTKG-GRU,ICEWS14,10,3,1024,100
+AdaTKG-GRU,ICEWS18,10,3,1024,100
+AdaTKG-GRU,ICEWS05-15,30,2,768,50
+AdaTKG-GRU,GDELT,30,3,1024,100

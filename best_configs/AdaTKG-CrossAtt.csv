@@ -1,0 +1,5 @@
+model,dataset,max_length,num_layers,hidden_dim,num_code
+AdaTKG-CrossAtt,ICEWS14,10,3,768,100
+AdaTKG-CrossAtt,ICEWS18,30,3,768,100
+AdaTKG-CrossAtt,ICEWS05-15,30,2,768,100
+AdaTKG-CrossAtt,GDELT,30,3,256,30
