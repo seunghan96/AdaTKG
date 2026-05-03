@@ -1,10 +1,11 @@
-# AdaTKG
+# AdaTKG: Adaptive Memory for Temporal Knowledge Graph Reasoning
 
-Reference implementation of **AdaTKG**, the temporal knowledge graph
-(TKG) reasoning method introduced in our paper. AdaTKG augments the
-static-inductive baseline TransFIR with a per-entity online memory
-governed by an **adaptive gate**, refining each entity's representation
-every time the entity participates in a fact.
+Implementation of **AdaTKG**, the temporal knowledge graph
+(TKG) reasoning method introduced in our paper. 
+
+AdaTKG augments the static-inductive baseline TransFIR with a per-entity online memory governed by an **adaptive gate**, refining each entity's representation every time the entity participates in a fact.
+
+<br>
 
 The repository supports four models reported in the paper:
 
@@ -15,8 +16,9 @@ The repository supports four models reported in the paper:
 | **AdaTKG-GRU**      | `meta`       | Online GRU adapter. |
 | **AdaTKG-CrossAtt** | `attention`  | Cross-attention readout over a bounded per-entity buffer. |
 
-All four share the same TransFIR backbone (BERT static encoder, VQ
-codebook, ConvTransE decoder) and only differ in the memory update rule.
+All four share the same TransFIR backbone and only differ in the memory update rule.
+
+<br>
 
 ---
 
@@ -28,18 +30,19 @@ conda activate adatkg
 pip install -r requirements.txt
 ```
 
-A single NVIDIA A100 80GB is sufficient for every experiment in the
-paper. CPU inference is not supported.
+<br>
 
 ---
 
 ## 2. Datasets
 
 We use four standard TKG benchmarks: **ICEWS14**, **ICEWS18**,
-**ICEWS05-15**, and **GDELT**. Place the raw files under
-`data/<DATASET>/` (each folder contains `train.txt`, `valid.txt`,
-`test.txt`, `entity2id.txt`, `relation2id.txt`). The `data/` folder
-itself is `.gitignore`d, so it is not shipped with the repo.
+**ICEWS05-15**, and **GDELT**. 
+
+Place the raw files under
+`data/<DATASET>/` 
+- Each folder contains `train.txt`, `valid.txt`, `test.txt`, `entity2id.txt`, `relation2id.txt`.
+
 
 Then, run the two preprocessing scripts once per dataset:
 
@@ -51,17 +54,13 @@ python data_process.py    --dataset {dataset} --T 14
 python word_embedding.py  --dataset {dataset} --bert_model_path {your_bert_path}
 ```
 
-Both caches are reused across all four models and all HP
-configurations, so this step is performed only once per benchmark.
+<br>
 
 ---
 
 ## 3. Quick start (best configuration)
 
-The launcher `run_experiment.sh` reads the per-(model, dataset)
-**best hyperparameter configuration** from `best_configs/<MODEL>.csv`
-(the same values reported in Appendix C of the paper) and trains with
-that single configuration:
+The launcher `run_experiment.sh` reads the per-(model, dataset) **best hyperparameter configuration** from `best_configs/<MODEL>.csv` and trains with that single configuration:
 
 ```bash
 # AdaTKG-EMA on ICEWS14 (default best HP), GPU 0
@@ -77,9 +76,9 @@ bash run_experiment.sh AdaTKG-CrossAtt train GDELT 0
 bash run_experiment.sh Base train ICEWS05-15 0
 ```
 
-Logs land in `${SAVE_ROOT:-./results}/<EXP_ID>/train_log.txt`. The
-final emerging-slice MRR / Hits@k can be read off the last
-`[Test Emerging]` line of the log.
+Logs land in `${SAVE_ROOT:-./results}/<EXP_ID>/train_log.txt`. 
+
+<br>
 
 To override the best-HP configuration, pass HP env vars before the
 command:
@@ -87,6 +86,8 @@ command:
 ```bash
 ML=15 NL=2 HD=512 NC=50 bash run_experiment.sh AdaTKG-EMA train ICEWS14 0
 ```
+
+<br>
 
 ---
 
@@ -102,8 +103,8 @@ ML=15 NL=2 HD=512 NC=50 bash run_experiment.sh AdaTKG-EMA train ICEWS14 0
 | `best_configs/AdaTKG-CrossAtt.csv` | AdaTKG-CrossAtt. |
 
 Each row has columns `model, dataset, max_length, num_layers, hidden_dim, num_code`.
-The Base baseline is trained at the same HP as AdaTKG-EMA so that the
-efficiency comparison in Table 7 is apples-to-apples.
+
+<br>
 
 ---
 
@@ -131,12 +132,11 @@ AdaTKG/
 └── utils.py
 ```
 
+<br>
+
 ---
 
 ## 6. Reproducing the main-paper results
-
-Reproducing Tables 1–3 (main results) reduces to one launcher call per
-`(model, dataset)`:
 
 ```bash
 for DS in ICEWS14 ICEWS18 ICEWS05-15 GDELT; do
@@ -147,6 +147,8 @@ for DS in ICEWS14 ICEWS18 ICEWS05-15 GDELT; do
 done
 ```
 
+<br>
+
 After training, run the same launcher with `test` to extract the
 emerging-slice metrics:
 
@@ -154,16 +156,14 @@ emerging-slice metrics:
 bash run_experiment.sh AdaTKG-EMA test ICEWS14 0
 ```
 
+<br>
 
 ---
 
 ## 7. Acknowledgement
 
-Our codebase builds on the official **TransFIR** implementation
-(<https://github.com/zhaodazhuang2333/TransFIR>); the static encoder,
-VQ codebook, and ConvTransE decoder are adopted from there unchanged,
-and we adopt the same datasets and chronological train/valid/test
-splits for fair comparison. We thank the TransFIR authors for
-releasing their code.
+Our codebase builds on the official [**TransFIR**](https://github.com/zhaodazhuang2333/TransFIR) implementation; the static encoder, VQ codebook, and ConvTransE decoder are adopted from there unchanged, and we adopt the same datasets and chronological train/valid/test splits for fair comparison. 
+
+We thank the TransFIR authors for releasing their code.
 
 ---
