@@ -68,12 +68,14 @@ class EnhancedModel(nn.Module):
         num_code=50,
         ablation=None,
         enhancement="none",
+        update_timing="before",
     ):
         super().__init__()
         assert enhancement in self.VALID_ENHANCEMENTS, (
             f"enhancement must be one of {self.VALID_ENHANCEMENTS}"
         )
         self.enhancement = enhancement
+        self.update_timing = update_timing
 
         self.activation = F.relu
         self.word_embedding = word_embedding
@@ -158,15 +160,19 @@ class EnhancedModel(nn.Module):
         if enhancement == "meta":
             self.online_adapter = OnlineAdapter(entity_dim, num_ent)
         elif enhancement == "ema":
-            self.online_adapter = EMAAdapter(entity_dim, num_ent, decay_mode="shared")
+            self.online_adapter = EMAAdapter(entity_dim, num_ent, decay_mode="shared",
+                                             update_timing=update_timing)
         elif enhancement == "ema_perent":
-            self.online_adapter = EMAAdapter(entity_dim, num_ent, decay_mode="perentity")
+            self.online_adapter = EMAAdapter(entity_dim, num_ent, decay_mode="perentity",
+                                             update_timing=update_timing)
         elif enhancement == "ema_perdim":
-            self.online_adapter = EMAAdapter(entity_dim, num_ent, decay_mode="perdim")
+            self.online_adapter = EMAAdapter(entity_dim, num_ent, decay_mode="perdim",
+                                             update_timing=update_timing)
         elif enhancement == "ema_constgate":
             self.online_adapter = EMAAdapter(entity_dim, num_ent,
                                              decay_mode="shared",
-                                             gate_mode="constant", const_gate=0.5)
+                                             gate_mode="constant", const_gate=0.5,
+                                             update_timing=update_timing)
         elif enhancement == "attention":
             self.online_adapter = AttentionAdapter(entity_dim, num_ent)
 

@@ -96,13 +96,16 @@ class EMAAdapter(nn.Module):
     """
 
     def __init__(self, embed_dim, num_entities, decay_mode="shared",
-                 gate_mode="adaptive", const_gate=0.5):
+                 gate_mode="adaptive", const_gate=0.5,
+                 update_timing="before"):
         super().__init__()
         self.embed_dim = embed_dim
         self.num_entities = num_entities
         self.decay_mode = decay_mode
         self.gate_mode = gate_mode
         self.const_gate = float(const_gate)
+        assert update_timing in ("before", "after"), update_timing
+        self.update_timing = update_timing
         if decay_mode == "shared":
             self.raw_decay = nn.Parameter(torch.tensor(2.0))
         elif decay_mode == "perentity":
@@ -153,10 +156,17 @@ class EMAAdapter(nn.Module):
         return static_embs * (1 - g) + mem * g
 
     def forward(self, query_entities, static_embs, chain_embs=None, relation_embs=None):
-        if chain_embs is not None and relation_embs is not None:
-            inter = self.interaction_encoder(torch.cat([chain_embs, relation_embs], dim=-1))
-            self.update_entities(query_entities, inter.detach())
-        return self.get_adaptive_embedding(query_entities, static_embs)
+        if self.update_timing == "before":
+            if chain_embs is not None and relation_embs is not None:
+                inter = self.interaction_encoder(torch.cat([chain_embs, relation_embs], dim=-1))
+                self.update_entities(query_entities, inter.detach())
+            return self.get_adaptive_embedding(query_entities, static_embs)
+        else:
+            out = self.get_adaptive_embedding(query_entities, static_embs)
+            if chain_embs is not None and relation_embs is not None:
+                inter = self.interaction_encoder(torch.cat([chain_embs, relation_embs], dim=-1))
+                self.update_entities(query_entities, inter.detach())
+            return out
 
 
 # ================================================================

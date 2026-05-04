@@ -234,6 +234,16 @@ def parse_args():
                  "meta", "ema", "ema_perent", "ema_perdim", "ema_constgate", "attention"],
         help="Which AdaTKG variant to apply",
     )
+    p.add_argument(
+        "--update_timing",
+        type=str,
+        default="before",
+        choices=["before", "after"],
+        help="EMA memory update relative to scoring. 'before' = update memory with the "
+             "current interaction signal then read for scoring (default); 'after' = read "
+             "pre-update memory for scoring then commit the update. Used by the Q2 "
+             "update-timing ablation (analysis/update_timing_ablation.sh).",
+    )
     return p.parse_args()
 
 
@@ -337,6 +347,7 @@ def main(args):
             num_code=args.num_code,
             ablation=args.ablation if args.ablation != "None" else None,
             enhancement=args.enhancement,
+            update_timing=args.update_timing,
         ).to(device)
 
         if args.ablation == "no_word_embedding":
