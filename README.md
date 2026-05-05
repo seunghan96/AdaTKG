@@ -97,7 +97,7 @@ ML=15 NL=2 HD=512 NC=50 bash run_experiment.sh AdaTKG-EMA train ICEWS14 0
 
 | File | Model |
 |---|---|
-| `best_configs/Base.csv`            | TransFIR baseline (= AdaTKG-EMA's best HP). |
+| `best_configs/Base.csv`            | TransFIR baseline (its own best HP). |
 | `best_configs/AdaTKG-EMA.csv`      | AdaTKG-EMA (default operator). |
 | `best_configs/AdaTKG-GRU.csv`      | AdaTKG-GRU. |
 | `best_configs/AdaTKG-CrossAtt.csv` | AdaTKG-CrossAtt. |
