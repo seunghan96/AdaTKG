@@ -1,9 +1,22 @@
 # AdaTKG: Adaptive Memory for Temporal Knowledge Graph Reasoning
 
+<p align="center">
+  <a href="https://arxiv.org/pdf/2605.07121"><img src="https://img.shields.io/badge/arXiv-2605.07121-b31b1b.svg" alt="arXiv"></a>
+  <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License"></a>
+</p>
+
 Implementation of **AdaTKG**, the temporal knowledge graph
 (TKG) reasoning method introduced in our paper. 
 
 AdaTKG augments the static-inductive baseline TransFIR with a per-entity online memory governed by an **adaptive gate**, refining each entity's representation every time the entity participates in a fact.
+
+<br>
+
+<p align="center">
+  <img src="assets/figure_a.png" width="63%">
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/figure_b.png" width="33%">
+</p>
 
 <br>
 
@@ -149,14 +162,6 @@ done
 
 <br>
 
-After training, run the same launcher with `test` to extract the
-emerging-slice metrics:
-
-```bash
-bash run_experiment.sh AdaTKG-EMA test ICEWS14 0
-```
-
-<br>
 
 ---
 
@@ -167,3 +172,8 @@ Our codebase builds on the official [**TransFIR**](https://github.com/zhaodazhua
 We thank the TransFIR authors for releasing their code.
 
 ---
+## Contact
+
+Seunghan Lee — seunghan.lee@lgresearch.ai
+
+
