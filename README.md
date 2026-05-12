@@ -13,7 +13,7 @@ AdaTKG augments the static-inductive baseline TransFIR with a per-entity online 
 <br>
 
 <p align="center">
-  <img src="assets/figure_a.png" width="63%">
+  <img src="assets/figure_a.png" width="62%">
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="assets/figure_b.png" width="33%">
 </p>
