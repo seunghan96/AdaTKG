@@ -172,6 +172,21 @@ Our codebase builds on the official [**TransFIR**](https://github.com/zhaodazhua
 We thank the TransFIR authors for releasing their code.
 
 ---
+
+## Citation
+
+If you find this work useful, please cite:
+
+```bibtex
+@article{lee2026adatkg,
+  title={AdaTKG: Adaptive Memory for Temporal Knowledge Graph Reasoning},
+  author={Lee, Seunghan and Seo, Jun and Lee, Jaehoon and Yoo, Sungdong and Kim, Minjae and Lim, Tae Yoon and Kang, Dongwan and Choi, Hwanil and Lee, SoonYoung and Ahn, Wonbin},
+  journal={arXiv preprint arXiv:2605.07121},
+  year={2026}
+}
+```
+
+---
 ## Contact
 
 Seunghan Lee — seunghan.lee@lgresearch.ai
